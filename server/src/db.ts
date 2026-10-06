@@ -1,7 +1,5 @@
 import fs from "node:fs";
 import path from "node:path";
-import crypto from "node:crypto";
-import bcrypt from "bcryptjs";
 import initSqlJs, { Database as SqlJsDatabase } from "sql.js";
 
 const dataDir = path.join(__dirname, "..", "data");
@@ -118,25 +116,7 @@ function migrate(database: AppDb) {
     );
   `);
 
-  const now = new Date().toISOString();
-  const admin = database.prepare("SELECT id FROM users WHERE username = ?").get("admin") as
-    | { id: number }
-    | undefined;
-  if (!admin) {
-    const adminPassword =
-      process.env.ADMIN_PASSWORD ?? crypto.randomBytes(9).toString("base64url");
-    console.log(
-      `[hub] 已创建管理员 admin，初始密码 ${adminPassword}（仅显示一次，登录后请尽快修改；也可用环境变量 ADMIN_PASSWORD 指定）`
-    );
-    database
-      .prepare(
-        `INSERT INTO users (username, password_hash, display_name, avatar, created_at, last_login_at, is_admin)
-         VALUES (?, ?, ?, ?, ?, ?, 1)`
-      )
-      .run("admin", bcrypt.hashSync(adminPassword, 10), "站点管理员", "管", now, now);
-  } else {
-    database.prepare("UPDATE users SET is_admin = 1 WHERE username = ?").run("admin");
-  }
+  /* 按要求不创建任何管理员账号：站点不存在可登录的管理员，管理后台仅保留功能代码 */
 }
 
 function persist(raw: SqlJsDatabase) {
