@@ -1,0 +1,17 @@
+node_modules
+dist
+server/data
+server/uploads
+*.sqlite
+*.sqlite-shm
+*.sqlite-wal
+.DS_Store
+runtime/*.pid
+runtime/*.log
+runtime-hub-*.log
+runtime/hub.started
+runtime/hub.clean-exit
+.mimosa/
+
+# 迷宫游戏本地用户数据库（含口令哈希，禁止公开）
+server/public/games/maze/data/db.json

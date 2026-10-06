@@ -1,0 +1,415 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+    <title>点击得分</title>
+    <style>
+      * { box-sizing: border-box; }
+      html, body { height: 100%; margin: 0; }
+      body {
+        font-family: "LXGW WenKai", "Kaiti SC", "STKaiti", "KaiTi", "楷体", "DFKai-SB", serif;
+        text-align: center;
+        padding: 48px 20px;
+        color: #1f1d1a;
+        overflow: hidden;
+        user-select: none;
+        letter-spacing: 0.1em;
+        background-color: #faf9f6;
+        background-image:
+          radial-gradient(ellipse 720px 420px at 8% 0%, rgba(20, 18, 16, 0.07), transparent 58%),
+          radial-gradient(ellipse 560px 380px at 96% 8%, rgba(20, 18, 16, 0.045), transparent 55%),
+          radial-gradient(ellipse 480px 320px at 70% 100%, rgba(20, 18, 16, 0.05), transparent 52%),
+          linear-gradient(180deg, #fcfbf8 0%, #f7f4ee 50%, #f2efe8 100%);
+        background-size: 100% 100%;
+        animation: inkDrift 28s ease-in-out infinite alternate;
+      }
+      body.flash {
+        animation: inkFlash 0.22s ease-out;
+      }
+      @keyframes inkDrift {
+        0% { background-position: 0% 0%, 100% 0%, 70% 100%, 0 0; }
+        100% { background-position: 2% 1%, 98% 2%, 66% 96%, 0 0; }
+      }
+      @keyframes inkFlash {
+        0% { filter: contrast(1.08) brightness(1.04); }
+        100% { filter: none; }
+      }
+      .stage {
+        position: relative;
+        z-index: 2;
+        max-width: 420px;
+        margin: 0 auto;
+        padding: 32px 26px 34px;
+        border-radius: 2px;
+        background: rgba(255, 252, 247, 0.82);
+        border: 1px solid rgba(20, 18, 16, 0.16);
+        box-shadow:
+          0 14px 36px rgba(20, 18, 16, 0.06),
+          inset 0 0 0 1px rgba(255, 255, 255, 0.5);
+      }
+      .stage::before {
+        content: "";
+        position: absolute;
+        left: 18px;
+        right: 18px;
+        top: 14px;
+        height: 1px;
+        background: linear-gradient(90deg, transparent, rgba(20, 18, 16, 0.28), transparent);
+      }
+      h1 {
+        margin: 8px 0 10px;
+        font-size: 36px;
+        font-weight: 500;
+        letter-spacing: 0.22em;
+        color: #141210;
+      }
+      #who {
+        margin: 0 0 22px;
+        color: #6e685c;
+        font-size: 15px;
+        letter-spacing: 0.12em;
+      }
+      .score-wrap {
+        display: inline-flex;
+        align-items: baseline;
+        gap: 12px;
+        margin-bottom: 28px;
+        font-size: 17px;
+        font-weight: 500;
+        color: #2a2723;
+        letter-spacing: 0.14em;
+      }
+      #n {
+        display: inline-block;
+        min-width: 1.2em;
+        font-size: 56px;
+        line-height: 1;
+        color: #c3272b;
+        font-weight: 500;
+        letter-spacing: 0.04em;
+        transition: transform 0.14s cubic-bezier(0.16, 1, 0.3, 1);
+      }
+      #n.pop { transform: scale(1.28); }
+      #btn {
+        position: relative;
+        font-size: 20px;
+        font-weight: 500;
+        font-family: inherit;
+        padding: 14px 40px;
+        border: 1px solid #a01f23;
+        border-radius: 1px;
+        color: #fff8f6;
+        cursor: pointer;
+        letter-spacing: 0.2em;
+        background: #c3272b;
+        box-shadow: 0 8px 18px rgba(20, 18, 16, 0.12);
+        transition: transform 0.12s ease, background 0.12s ease, box-shadow 0.12s ease;
+        overflow: visible;
+      }
+      #btn::after {
+        content: "";
+        position: absolute;
+        inset: -10px;
+        border: 1px solid rgba(195, 39, 43, 0.18);
+        border-radius: 1px;
+        opacity: 0.7;
+        pointer-events: none;
+        animation: sealHalo 2.2s ease-in-out infinite alternate;
+      }
+      #btn:active, #btn.pressed {
+        transform: translateY(2px) scale(0.97);
+        background: #a81f24;
+        box-shadow: 0 3px 10px rgba(20, 18, 16, 0.14);
+      }
+      @keyframes sealHalo {
+        0% { transform: scale(0.96); opacity: 0.35; }
+        100% { transform: scale(1.04); opacity: 0.85; }
+      }
+      #hint {
+        margin-top: 18px;
+        color: #6e685c;
+        font-size: 13.5px;
+        letter-spacing: 0.12em;
+        line-height: 1.7;
+      }
+      #combo {
+        min-height: 36px;
+        margin-top: 10px;
+        font-size: 17px;
+        font-weight: 500;
+        color: #6e685c;
+        letter-spacing: 0.14em;
+        opacity: 0;
+        transform: scale(0.9);
+        transition: opacity 0.18s ease, transform 0.18s ease, color 0.18s ease, font-size 0.18s ease;
+      }
+      #combo.show { opacity: 1; transform: scale(1.04); }
+      #combo.t2 { color: #4a4640; font-size: 18px; }
+      #combo.t3 { color: #2a2723; font-size: 19px; }
+      #combo.t4 { color: #c3272b; font-size: 20px; letter-spacing: 0.18em; }
+      #combo.t5 { color: #c3272b; font-size: 22px; letter-spacing: 0.2em; transform: scale(1.08); }
+      #combo.t6 { color: #a01f23; font-size: 24px; letter-spacing: 0.22em; transform: scale(1.12); }
+      #combo .mod {
+        display: block;
+        margin-top: 2px;
+        font-size: 0.82em;
+        letter-spacing: 0.28em;
+        opacity: 0.92;
+      }
+      #fx {
+        position: fixed;
+        inset: 0;
+        pointer-events: none;
+        overflow: hidden;
+        z-index: 30;
+      }
+      .float {
+        position: absolute;
+        font-weight: 500;
+        font-size: 28px;
+        font-family: inherit;
+        color: #141210;
+        letter-spacing: 0.12em;
+        text-shadow: 0 1px 0 rgba(255, 252, 247, 0.8);
+        animation: floatUp 0.9s cubic-bezier(0.15, 0.85, 0.25, 1) forwards;
+      }
+      .float.hot { color: #c3272b; font-size: 32px; }
+      .float.rare { color: #a01f23; font-size: 36px; letter-spacing: 0.18em; }
+      .ring {
+        position: absolute;
+        border-radius: 50%;
+        border: 1.5px solid rgba(20, 18, 16, 0.45);
+        transform: translate(-50%, -50%);
+        animation: ringOut 0.55s ease-out forwards;
+      }
+      .spark {
+        position: absolute;
+        width: 8px;
+        height: 8px;
+        border-radius: 50%;
+        transform: translate(-50%, -50%);
+        background: #2a2723;
+        opacity: 0.85;
+        animation: spark 0.7s ease-out forwards;
+      }
+      .spark.cinnabar { background: #c3272b; }
+      .blot {
+        position: absolute;
+        width: 0;
+        height: 0;
+        border-radius: 50%;
+        background: radial-gradient(circle, rgba(20, 18, 16, 0.35) 0%, rgba(20, 18, 16, 0.08) 45%, transparent 70%);
+        transform: translate(-50%, -50%);
+        animation: blot 0.75s ease-out forwards;
+      }
+      .shock {
+        position: absolute;
+        width: 18px;
+        height: 18px;
+        border-radius: 50%;
+        background: radial-gradient(circle, rgba(195, 39, 43, 0.35) 0%, rgba(20, 18, 16, 0.12) 40%, transparent 70%);
+        transform: translate(-50%, -50%);
+        animation: shock 0.35s ease-out forwards;
+      }
+      @keyframes floatUp {
+        0% { opacity: 1; transform: translate(-50%, 0) scale(0.75); }
+        40% { opacity: 1; transform: translate(-50%, -32px) scale(1.12); }
+        100% { opacity: 0; transform: translate(-50%, -96px) scale(1); }
+      }
+      @keyframes ringOut {
+        0% { opacity: 0.9; width: 16px; height: 16px; }
+        100% { opacity: 0; width: 140px; height: 140px; }
+      }
+      @keyframes spark {
+        0% { opacity: 0.9; transform: translate(-50%, -50%) scale(1.1); }
+        100% { opacity: 0; transform: translate(var(--dx), var(--dy)) scale(0.2); }
+      }
+      @keyframes blot {
+        0% { opacity: 0.7; width: 12px; height: 12px; }
+        100% { opacity: 0; width: 90px; height: 70px; }
+      }
+      @keyframes shock {
+        0% { opacity: 1; width: 16px; height: 16px; }
+        100% { opacity: 0; width: 100px; height: 100px; }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="stage">
+      <h1>点击得分</h1>
+      <p id="who">正在识别玩家...</p>
+      <div class="score-wrap">当前分数 <strong id="n">0</strong></div>
+      <div>
+        <button id="btn" type="button">点击 +1</button>
+        <div id="combo"></div>
+        <p id="hint">连点如运笔——越急，墨痕越浓</p>
+      </div>
+    </div>
+    <div id="fx" aria-hidden="true"></div>
+    <script src="/hub-sdk.js"></script>
+    <script>
+      let n = 0;
+      let combo = 0;
+      let lastClick = 0;
+      let audioCtx = null;
+      const btn = document.getElementById("btn");
+      const scoreEl = document.getElementById("n");
+      const comboEl = document.getElementById("combo");
+      const fx = document.getElementById("fx");
+
+      /** 连击档位：水墨运笔意象 */
+      function comboTier(c) {
+        if (c >= 50) return { cls: "t6", name: "力透纸背", float: "力透纸背 +1" };
+        if (c >= 30) return { cls: "t5", name: "入木三分", float: "入木三分 +1" };
+        if (c >= 20) return { cls: "t4", name: "笔走龙蛇", float: "笔走龙蛇 +1" };
+        if (c >= 12) return { cls: "t3", name: "行云流水", float: "行云流水 +1" };
+        if (c >= 7)  return { cls: "t2", name: "妙笔生花", float: "妙笔 +1" };
+        if (c >= 4)  return { cls: "t2", name: "连墨成势", float: "连墨 +1" };
+        if (c >= 2)  return { cls: "", name: "起笔", float: "+1" };
+        return { cls: "", name: "", float: "+1" };
+      }
+
+      function ensureAudio() {
+        if (!audioCtx) {
+          const Ctx = window.AudioContext || window.webkitAudioContext;
+          if (!Ctx) return null;
+          audioCtx = new Ctx();
+        }
+        if (audioCtx.state === "suspended") audioCtx.resume();
+        return audioCtx;
+      }
+
+      function playClickSound(level) {
+        const ctx = ensureAudio();
+        if (!ctx) return;
+        const t0 = ctx.currentTime;
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        const pitch = 220 + Math.min(level, 16) * 18;
+        osc.type = "triangle";
+        osc.frequency.setValueAtTime(pitch, t0);
+        osc.frequency.exponentialRampToValueAtTime(pitch * 1.25, t0 + 0.06);
+        gain.gain.setValueAtTime(0.0001, t0);
+        gain.gain.exponentialRampToValueAtTime(0.1, t0 + 0.012);
+        gain.gain.exponentialRampToValueAtTime(0.0001, t0 + 0.2);
+        osc.connect(gain);
+        gain.connect(ctx.destination);
+        osc.start(t0);
+        osc.stop(t0 + 0.22);
+
+        if (level >= 5) {
+          const osc2 = ctx.createOscillator();
+          const g2 = ctx.createGain();
+          osc2.type = "sine";
+          osc2.frequency.value = pitch * 1.8;
+          g2.gain.setValueAtTime(0.05, t0);
+          g2.gain.exponentialRampToValueAtTime(0.0001, t0 + 0.24);
+          osc2.connect(g2);
+          g2.connect(ctx.destination);
+          osc2.start(t0);
+          osc2.stop(t0 + 0.26);
+        }
+      }
+
+      function spawnFx(clientX, clientY, burst) {
+        const tier = comboTier(burst);
+        const float = document.createElement("div");
+        float.className = "float" + (burst >= 30 ? " rare" : burst >= 7 ? " hot" : "");
+        float.textContent = tier.float;
+        float.style.left = clientX + "px";
+        float.style.top = clientY - 10 + "px";
+        fx.appendChild(float);
+
+        const shock = document.createElement("div");
+        shock.className = "shock";
+        shock.style.left = clientX + "px";
+        shock.style.top = clientY + "px";
+        fx.appendChild(shock);
+
+        const blot = document.createElement("div");
+        blot.className = "blot";
+        blot.style.left = clientX + "px";
+        blot.style.top = clientY + "px";
+        fx.appendChild(blot);
+
+        for (let r = 0; r < (burst >= 5 ? 2 : 1); r++) {
+          const ring = document.createElement("div");
+          ring.className = "ring";
+          ring.style.left = clientX + "px";
+          ring.style.top = clientY + "px";
+          ring.style.animationDelay = r * 0.06 + "s";
+          fx.appendChild(ring);
+          setTimeout(function () { ring.remove(); }, 600);
+        }
+
+        const sparkCount = 10 + Math.min(burst, 8);
+        for (let i = 0; i < sparkCount; i++) {
+          const spark = document.createElement("div");
+          spark.className = "spark" + (i % 3 === 0 ? " cinnabar" : "");
+          const ang = (Math.PI * 2 * i) / sparkCount + Math.random() * 0.35;
+          const dist = 42 + Math.random() * 58 + burst * 2;
+          spark.style.left = clientX + "px";
+          spark.style.top = clientY + "px";
+          spark.style.width = 6 + Math.random() * 7 + "px";
+          spark.style.height = spark.style.width;
+          spark.style.setProperty("--dx", Math.cos(ang) * dist + "px");
+          spark.style.setProperty("--dy", Math.sin(ang) * dist + "px");
+          fx.appendChild(spark);
+          setTimeout(function () { spark.remove(); }, 720);
+        }
+
+        setTimeout(function () { float.remove(); }, 900);
+        setTimeout(function () { shock.remove(); }, 360);
+        setTimeout(function () { blot.remove(); }, 780);
+      }
+
+      GameHub.onReady(function (user) {
+        document.getElementById("who").textContent =
+          "玩家：" + (user && user.displayName ? user.displayName : "未知");
+      });
+      GameHub.onSave(function (data) {
+        if (data && typeof data.n === "number") {
+          n = data.n;
+          scoreEl.textContent = String(n);
+        }
+      });
+
+      btn.addEventListener("pointerdown", function (e) {
+        btn.classList.add("pressed");
+        const now = Date.now();
+        combo = now - lastClick < 700 ? combo + 1 : 1;
+        lastClick = now;
+
+        const x = e.clientX || btn.getBoundingClientRect().left + btn.offsetWidth / 2;
+        const y = e.clientY || btn.getBoundingClientRect().top + btn.offsetHeight / 2;
+        n += 1;
+        scoreEl.textContent = String(n);
+        scoreEl.classList.remove("pop");
+        void scoreEl.offsetWidth;
+        scoreEl.classList.add("pop");
+
+        document.body.classList.remove("flash");
+        void document.body.offsetWidth;
+        document.body.classList.add("flash");
+
+        if (combo >= 2) {
+          const tier = comboTier(combo);
+          comboEl.className = "show" + (tier.cls ? " " + tier.cls : "");
+          comboEl.innerHTML = combo + " 连击<span class=\"mod\">" + tier.name + "</span>";
+        } else {
+          comboEl.className = "";
+          comboEl.textContent = "";
+        }
+
+        spawnFx(x, y, combo);
+        playClickSound(combo);
+        GameHub.submitScore(n);
+        GameHub.save({ n: n });
+      });
+      btn.addEventListener("pointerup", function () { btn.classList.remove("pressed"); });
+      btn.addEventListener("pointerleave", function () { btn.classList.remove("pressed"); });
+      btn.addEventListener("pointercancel", function () { btn.classList.remove("pressed"); });
+    </script>
+  </body>
+</html>

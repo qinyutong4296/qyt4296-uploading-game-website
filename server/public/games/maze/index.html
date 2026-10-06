@@ -1,0 +1,578 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no, viewport-fit=cover">
+<title>投影回廊 · Perspective Corridor</title>
+<script>
+/* 尽早挂画质 class，避免登录页 CSS 动画先把访客机 CPU 打满 */
+(function () {
+  try {
+    var pref = localStorage.getItem('pcorridor.gfx') || 'auto';
+    var tier = 0;
+    if (pref === 'high') tier = 2;
+    else if (pref === 'mid') tier = 1;
+    else if (pref === 'low') tier = 0;
+    else {
+      var mem = typeof navigator.deviceMemory === 'number' ? navigator.deviceMemory : 4;
+      var cores = navigator.hardwareConcurrency || 4;
+      var dpr = window.devicePixelRatio || 1;
+      // 访客机 / 笔记本偏保守：默认流畅
+      if (mem <= 8 || cores <= 8 || dpr >= 1.5) tier = 0;
+      else tier = 1;
+    }
+    document.documentElement.classList.add(tier === 0 ? 'gfx-low' : tier === 1 ? 'gfx-mid' : 'gfx-high');
+  } catch (e) {
+    document.documentElement.classList.add('gfx-low');
+  }
+})();
+</script>
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body class="gfx-pick-open">
+  <div id="sky" aria-hidden="true">
+    <div class="sky-wash"></div>
+    <div class="sky-band b1"></div>
+    <div class="sky-band b2"></div>
+    <div class="sky-orb o1"></div>
+    <div class="sky-orb o2"></div>
+    <div class="sky-orb o3"></div>
+    <div class="sky-mist"></div>
+    <div class="sky-sparkles"></div>
+  </div>
+  <div id="stage"></div>
+  <div id="vignette"></div>
+  <div id="flash"></div>
+  <div id="hurt-fx" hidden aria-live="assertive">
+    <div class="hurt-wash"></div>
+    <div class="hurt-card">
+      <div class="hurt-delta">−1</div>
+      <div class="hurt-heart">♥</div>
+      <div class="hurt-msg" id="hurt-msg">失去一颗心</div>
+      <div class="hurt-taunt" id="hurt-taunt"></div>
+      <div class="hurt-remain" id="hurt-remain"></div>
+    </div>
+  </div>
+
+  <!-- HUD -->
+  <div id="hud">
+    <div id="hud-left">
+      <div id="chapter">
+        <div class="ch-kicker"><span id="ch-index">00</span><span id="ch-sub">SANDBOX LAB</span></div>
+        <div class="ch-title-row">
+          <div id="ch-name">第零关 · 机能试验场</div>
+          <div id="play-mode-tag" hidden>观光</div>
+          <div id="mode-tag">3D</div>
+        </div>
+      </div>
+      <div id="dots" title="已解锁章节"></div>
+    </div>
+
+    <div id="toolbar">
+      <div id="stats" aria-label="状态">
+        <div id="stat-lives" title="生命（坠落会失去一条并重开本章）"></div>
+        <span class="stat-div"></span>
+        <div id="stat-keys" title="已收集星屑">✦ 0/0</div>
+        <span class="stat-div"></span>
+        <div id="stat-switch" title="本章视角切换次数">↺ 0</div>
+        <span class="stat-div"></span>
+        <div id="stat-steles" title="已阅读的建筑师留言">◈ 0/0</div>
+        <span class="stat-div" id="stat-timer-div" hidden></span>
+        <div id="stat-timer" title="屠戮模式限时" hidden>⏱ 5:00</div>
+      </div>
+      <button id="btn-mode" class="btn-mode" title="切换 2D 俯视 / 3D 等距 (空格)">
+        <span id="mode-icon">⬢</span>
+        <span class="mode-copy">
+          <span id="mode-now">当前 3D</span>
+          <span id="mode-label">切到俯视</span>
+        </span>
+      </button>
+      <button id="btn-yaw-ccw" class="btn-yaw" type="button" title="3D 方位左转 (Q)" hidden aria-label="方位左转">⟲</button>
+      <button id="btn-yaw-cw" class="btn-yaw" type="button" title="3D 方位右转 (E)" hidden aria-label="方位右转">⟳</button>
+      <div id="tool-cluster">
+        <button id="btn-levels" title="章节目录" aria-label="章节目录">☰</button>
+        <button id="btn-restart" title="重玩本章 (R)" aria-label="重玩本章">↻</button>
+        <div id="vol-control" title="音量">
+          <button id="btn-mute" type="button" title="音效开关 (M)" aria-label="音效开关">🔊</button>
+          <input id="vol-slider" type="range" min="0" max="100" step="1" value="10" aria-label="音量调节">
+          <span id="vol-value" aria-live="polite">10</span>
+        </div>
+        <div id="gfx-control" title="画质（推荐「均衡」：更清晰且静止锁帧；卡顿再选「流畅」）">
+          <span id="gfx-icon" aria-hidden="true">◇</span>
+          <select id="gfx-select" aria-label="画质">
+            <option value="auto">自动</option>
+            <option value="low">流畅</option>
+            <option value="mid">均衡</option>
+            <option value="high">高清</option>
+          </select>
+        </div>
+        <button id="btn-about" title="关于与操作说明" aria-label="关于">ⓘ</button>
+        <button id="btn-player" title="账号" aria-label="账号">
+          <span id="player-icon">◈</span><span id="player-name">游客</span>
+        </button>
+      </div>
+    </div>
+
+    <div id="player-menu"></div>
+
+    <div id="toast"></div>
+
+    <div id="level-open" aria-live="polite" hidden>
+      <div class="lo-frame">
+        <div class="lo-kicker">本章要领</div>
+        <div class="lo-title" id="lo-title"></div>
+        <div class="lo-rule" aria-hidden="true"></div>
+        <p class="lo-body" id="lo-body"></p>
+      </div>
+    </div>
+
+    <div id="stele-note" aria-live="polite" hidden>
+      <div class="sn-frame">
+        <div class="sn-ornament" aria-hidden="true">
+          <span class="sn-diamond">◈</span>
+        </div>
+        <div class="sn-kicker">建筑师留言</div>
+        <div class="sn-num" id="stele-num"></div>
+        <div class="sn-rule" aria-hidden="true"></div>
+        <p class="sn-body" id="stele-body"></p>
+        <div class="sn-foot" aria-hidden="true">· · ·</div>
+      </div>
+    </div>
+
+    <div id="hint"></div>
+
+    <div id="legend">
+      <div class="lg-title">通路图例</div>
+      <div class="lg-row"><span class="chip chip-illu"></span>对齐 · 仅 3D</div>
+      <div class="lg-row"><span class="chip chip-stair"></span>侧面色差 · 须俯视</div>
+      <div class="lg-row"><span class="chip chip-step"></span>同色平面 · 可走</div>
+      <div class="lg-row"><span class="chip chip-gear"></span>齿轮 · 点/拖</div>
+      <div class="lg-sep"></div>
+      <div class="lg-row"><span class="chip" id="chip0"></span>高度 0</div>
+      <div class="lg-row"><span class="chip" id="chip1"></span>高度 1</div>
+      <div class="lg-row"><span class="chip" id="chip2"></span>高度 2</div>
+    </div>
+
+    <div id="credits"><kbd>WASD</kbd> / 点地　<kbd>空格</kbd> 视角　<kbd>Q</kbd>/<kbd>E</kbd> 转角　屠戮 <kbd>J</kbd> / 滚轮攻击　右键/<kbd>Esc</kbd> 停步　<kbd>R</kbd> 重玩</div>
+  </div>
+
+  <!-- 画质选择（打开游戏后第一步） -->
+  <div id="gfx-pick" aria-label="选择画质">
+    <div class="gp-shell">
+      <div class="gp-brand">
+        <div class="gp-glyph">◇</div>
+        <h1>投影回廊</h1>
+        <p class="gp-en">PERSPECTIVE CORRIDOR</p>
+        <p class="gp-tag">先选择画质，再进入登录</p>
+      </div>
+      <div class="gp-probe" id="gp-probe" aria-live="polite">
+        <div class="gp-probe-status" id="gp-probe-status">正在检测本机性能…</div>
+        <div class="gp-probe-detail" id="gp-probe-detail"></div>
+      </div>
+      <div class="gp-cards" role="radiogroup" aria-label="画质档位" id="gp-cards">
+        <button type="button" class="gp-card" data-gfx="low" aria-checked="false" role="radio">
+          <span class="gp-badge" hidden>推荐</span>
+          <span class="gp-kicker">SMOOTH</span>
+          <span class="gp-title">流 畅</span>
+          <span class="gp-desc">较低分辨率、静止约 25fps。走动仍平滑插值。核显 / 访客机优先。</span>
+          <span class="gp-meta">最省 · 静止约 25fps</span>
+        </button>
+        <button type="button" class="gp-card" data-gfx="mid" aria-checked="false" role="radio">
+          <span class="gp-badge" hidden>推荐</span>
+          <span class="gp-kicker">BALANCED</span>
+          <span class="gp-title">均 衡</span>
+          <span class="gp-desc">接近原生清晰度，关装饰循环以省 CPU。多数电脑的稳妥选择。</span>
+          <span class="gp-meta">清晰 · 静止约 30fps</span>
+        </button>
+        <button type="button" class="gp-card" data-gfx="high" aria-checked="false" role="radio">
+          <span class="gp-badge" hidden>推荐</span>
+          <span class="gp-kicker">DETAIL</span>
+          <span class="gp-title">高 清</span>
+          <span class="gp-desc">更高像素比、装饰动效与墙体半透。独显或性能充裕时再选。</span>
+          <span class="gp-meta">细腻 · 最高约 60fps</span>
+        </button>
+      </div>
+      <button type="button" class="gp-confirm" id="gp-confirm" disabled>请稍候检测…</button>
+      <p class="gp-foot">推荐仅供参考，可自行改选；进入后仍可在右上角随时切换</p>
+    </div>
+  </div>
+
+  <!-- 登录界面 -->
+  <div id="auth" class="hidden" style="display:none">
+    <div class="auth-deco" aria-hidden="true">
+      <div class="auth-sky"></div>
+      <div class="auth-haze"></div>
+      <div class="auth-grid"></div>
+      <div class="auth-path" id="auth-path"></div>
+      <canvas id="auth-canvas"></canvas>
+      <div class="auth-orb o1"></div>
+      <div class="auth-orb o2"></div>
+      <div class="ad-ring r1"></div>
+      <div class="ad-ring r2"></div>
+      <div class="ad-glyph g1">◈</div>
+      <div class="ad-glyph g2">◇</div>
+    </div>
+
+    <div class="auth-shell">
+      <div class="auth-cluster">
+        <div class="auth-col auth-col-view auth-col-view-l">
+          <section class="auth-panel auth-panel-view auth-panel-viewflat" tabindex="0" aria-label="俯视示意，悬停查看">
+            <div class="auth-view-veil" aria-hidden="true">
+              <span class="auth-view-veil-kicker">VIEW · 01</span>
+              <span class="auth-view-veil-title">俯 视</span>
+              <span class="auth-view-veil-hint">悬停揭晓</span>
+            </div>
+            <div class="auth-panel-kicker">VIEW · 01</div>
+            <div class="af-head">
+              <span class="af-title">俯 视</span>
+              <span class="af-en">TOP-DOWN</span>
+            </div>
+            <div class="af-stage af-flat">
+              <div class="af-flat-board">
+                <span class="af-cell c1"></span>
+                <span class="af-cell c2"></span>
+                <span class="af-cell c3 ghost"></span>
+                <span class="af-cell c4"></span>
+                <span class="af-cell c5 key"></span>
+                <span class="af-cell c6"></span>
+                <span class="af-cell c7 ghost"></span>
+                <span class="af-cell c8"></span>
+                <span class="af-cell c9"></span>
+                <span class="af-pawn"></span>
+                <span class="af-beam"></span>
+              </div>
+              <div class="af-note">高度被压平 · 青桥现形</div>
+            </div>
+            <div class="af-verse">
+              <span>压</span><span>平</span><span>高</span><span>差</span>
+            </div>
+          </section>
+        </div>
+
+        <div class="auth-col auth-col-l">
+          <section class="auth-panel auth-panel-guide">
+            <div class="auth-panel-kicker">GUIDE</div>
+            <div class="aw-block">
+              <div class="aw-kicker">PREMISE</div>
+              <div class="aw-title">看得见，就能走</div>
+              <p class="aw-text">投影回廊是一座视角迷宫：当前画面里相邻的浮砖，脚下就真的接通。俯视压平高度，等距露出墙色与错位桥。</p>
+            </div>
+            <div class="aw-block">
+              <div class="aw-kicker">RULE</div>
+              <div class="aw-title">视角即通路</div>
+              <p class="aw-text">空格在俯视与 3D 间翻转。多方位关再用 Q / E 转卦限——同一座砖，换个方位才对齐成桥。</p>
+            </div>
+            <div class="aw-block">
+              <div class="aw-kicker">PHASE</div>
+              <div class="aw-title">幽灵桥与假台</div>
+              <p class="aw-text">青桥只在俯视实体，金桥只在 3D 实体。假台在侧面站得住，一切回俯视便是悬崖。</p>
+            </div>
+            <div class="aw-chips">
+              <button type="button" class="aw-chip" data-demo="space">空格 · 切换</button>
+              <button type="button" class="aw-chip" data-demo="yaw">Q/E · 方位</button>
+              <button type="button" class="aw-chip" data-demo="click">点地 · 行走</button>
+              <button type="button" class="aw-chip" data-demo="gear">齿轮 · 改图</button>
+            </div>
+            <div id="auth-demo" class="auth-demo hidden" aria-live="polite">
+              <div class="auth-demo-card">
+                <div class="auth-demo-head">
+                  <span class="auth-demo-title"></span>
+                  <span class="auth-demo-sub"></span>
+                </div>
+                <div class="auth-demo-foot">第 0 关机能试验场 · 循环演示</div>
+                <canvas width="320" height="200"></canvas>
+              </div>
+            </div>
+          </section>
+        </div>
+
+        <div class="auth-col auth-col-c">
+          <section class="auth-panel auth-panel-brand">
+            <div class="auth-panel-kicker">ABOUT</div>
+            <div class="auth-logo">
+              <div class="auth-glyph">◈</div>
+              <h1>投影回廊</h1>
+              <div class="auth-sub">PERSPECTIVE CORRIDOR</div>
+              <div class="auth-tagline">视角即真相 · 2D ↔ 3D</div>
+            </div>
+            <div class="auth-intro">
+              <p class="auth-lede">一座会说谎的回廊。你不是在跳，而是在改看法——换个视角，断桥与绝壁会重新成为路。</p>
+              <ul class="auth-beats">
+                <li><em>拾星</em>　星屑开金环，部分章节须按序拾取</li>
+                <li><em>机关</em>　拖齿轮、点转盘，让石桥转到平直</li>
+                <li><em>旅途</em>　观光正向十三章；屠戮倒行、限时与影怪</li>
+                <li><em>操作</em>　WASD 转向进退，或点地砖寻路</li>
+              </ul>
+            </div>
+          </section>
+
+          <section class="auth-panel auth-panel-account">
+            <div class="auth-panel-kicker">ACCOUNT</div>
+
+            <!-- 合集站嵌入：未绑定回廊账号时的选择页 -->
+            <div id="hub-choice" class="hub-choice hidden">
+              <div class="hub-choice-lead">
+                你已登录合集站账号 <strong id="hub-choice-name">—</strong>。<br>
+                请选择如何进入投影回廊（进度保存在服务器，可换电脑继续玩）：
+              </div>
+              <button id="hub-choice-use" type="button" class="auth-primary hub-choice-btn">
+                使用合集站账号密码注册并进入
+              </button>
+              <button id="hub-choice-new" type="button" class="hub-choice-alt">
+                自行输入账号密码注册
+              </button>
+              <div id="hub-choice-form" class="hub-choice-form hidden">
+                <label class="auth-field">
+                  <span id="hub-choice-user-label">回廊用户名</span>
+                  <input id="hub-choice-user" maxlength="20" autocomplete="username">
+                </label>
+                <label class="auth-field">
+                  <span id="hub-choice-pass-label">密码</span>
+                  <input id="hub-choice-pass" type="password" maxlength="64" autocomplete="current-password">
+                </label>
+                <p id="hub-choice-hint" class="hub-choice-hint"></p>
+                <div id="hub-choice-error" class="hub-choice-error"></div>
+                <button id="hub-choice-submit" type="button" class="auth-primary">确认并进入</button>
+                <button id="hub-choice-back" type="button" class="hub-choice-back">返回选择</button>
+              </div>
+            </div>
+
+            <div id="auth-classic">
+              <div class="auth-tabs">
+                <button class="auth-tab active" data-tab="login">登 录</button>
+                <button class="auth-tab" data-tab="register">注 册</button>
+              </div>
+              <form id="auth-form" autocomplete="off">
+                <label class="auth-field">
+                  <span>用户名</span>
+                  <input id="auth-user" placeholder="2–20 位中文 / 字母 / 数字" maxlength="20" autocomplete="username">
+                </label>
+                <label class="auth-field">
+                  <span>密码</span>
+                  <input id="auth-pass" type="password" placeholder="至少 4 位" autocomplete="current-password">
+                </label>
+                <div id="auth-error"></div>
+                <button id="auth-submit" class="auth-primary" type="submit">进入回廊</button>
+              </form>
+              <div class="auth-divider"><span>或</span></div>
+              <button id="auth-guest" type="button">游客进入 · 进度保存在本机</button>
+            </div>
+          </section>
+        </div>
+
+        <div class="auth-col auth-col-r">
+          <section class="auth-panel auth-panel-journey">
+            <div class="auth-panel-kicker">JOURNEY</div>
+            <div class="aw-block">
+              <div class="aw-kicker">MODE</div>
+              <div class="aw-title">两种旅途</div>
+              <p class="aw-text">观光：无影无剑，从试验场走进十三章。<br>屠戮：背负大剑，影怪侧袭，自终章倒行，限时五分钟。</p>
+            </div>
+            <div class="aw-block">
+              <div class="aw-kicker">COMBAT</div>
+              <div class="aw-title">影怪与心</div>
+              <p class="aw-text">屠戮中影怪只打同层。J 挥剑斩影；踏空或被咬扣心，三心耗尽则本章重开。</p>
+            </div>
+            <div class="aw-quote">
+              <span class="aw-qmark">「</span>
+              错觉不是障碍，是唯一的通路。
+            </div>
+          </section>
+
+          <section class="auth-panel auth-panel-net">
+            <div class="auth-panel-kicker">NETWORK</div>
+            <div class="aw-block">
+              <div class="aw-kicker">SAVE</div>
+              <div class="aw-title">账号与游客</div>
+              <p class="aw-text">合集站内：回廊账号存在服务器数据库，可换电脑继续。游客进度只留在此浏览器。</p>
+            </div>
+            <div id="auth-share" class="auth-share hidden" aria-live="polite">
+              <div class="auth-share-label">把下面地址发给其它电脑（同一 Wi-Fi）</div>
+              <div class="auth-share-row">
+                <input id="auth-share-url" type="text" readonly value="">
+                <button id="auth-share-copy" type="button">复制</button>
+              </div>
+              <div id="auth-share-more" class="auth-share-more"></div>
+            </div>
+            <div class="auth-lan">
+              <input id="auth-host" type="text" placeholder="访客：填主机 IP，如 10.16.232.84" autocomplete="off" spellcheck="false">
+              <button id="auth-host-go" type="button">连接主机</button>
+            </div>
+            <div id="auth-status"><span class="status-dot waiting"></span><span id="auth-status-text">正在连接存档服务…</span></div>
+          </section>
+        </div>
+
+        <div class="auth-col auth-col-view auth-col-view-r">
+          <section class="auth-panel auth-panel-view auth-panel-viewiso" tabindex="0" aria-label="等距示意，悬停查看">
+            <div class="auth-view-veil" aria-hidden="true">
+              <span class="auth-view-veil-kicker">VIEW · 02</span>
+              <span class="auth-view-veil-title">等 距</span>
+              <span class="auth-view-veil-hint">悬停揭晓</span>
+            </div>
+            <div class="auth-panel-kicker">VIEW · 02</div>
+            <div class="af-head">
+              <span class="af-title">等 距</span>
+              <span class="af-en">ISOMETRIC</span>
+            </div>
+            <div class="af-stage af-iso">
+              <div class="af-iso-stack">
+                <div class="af-brick b1"><i></i><i></i><i></i></div>
+                <div class="af-brick b2 tall"><i></i><i></i><i></i></div>
+                <div class="af-brick b3 ghost"><i></i><i></i><i></i></div>
+                <div class="af-brick b4"><i></i><i></i><i></i></div>
+                <div class="af-brick b5 goal"><i></i><i></i><i></i></div>
+                <div class="af-iso-pawn"></div>
+                <div class="af-iso-ring"></div>
+              </div>
+              <div class="af-note">墙色显露 · 假台可站</div>
+            </div>
+            <div class="af-verse">
+              <span>侧</span><span>面</span><span>见</span><span>色</span>
+            </div>
+          </section>
+        </div>
+      </div>
+    </div>
+    <div class="auth-foot">双击 start-game.cmd 启动 · 浏览器打开本机地址 · 勿直接打开 index.html</div>
+  </div>
+
+  <!-- 模式选择（登录后） -->
+  <div id="mode-pick" class="hidden" aria-label="选择游戏模式">
+    <div class="mp-shell">
+      <div class="mp-brand">
+        <div class="mp-glyph">◈</div>
+        <h1>投影回廊</h1>
+        <p class="mp-en">PERSPECTIVE CORRIDOR</p>
+        <p class="mp-tag">选择操作方式与旅途</p>
+      </div>
+      <div class="mp-ctrl-block" role="group" aria-label="操作方式">
+        <div class="mp-ctrl-label">操作方式</div>
+        <div class="mp-ctrl-row">
+          <button type="button" class="mp-ctrl" id="mp-ctrl-kb" data-ctrl="keyboard" aria-pressed="false" aria-describedby="mp-ctrl-guide">
+            <span class="mp-ctrl-kicker">KEYBOARD</span>
+            <span class="mp-ctrl-title">键盘游玩</span>
+            <span class="mp-ctrl-desc">WASD 转向进退 · 空格切视角 · J 攻击<br>关闭鼠标点地与滚轮</span>
+          </button>
+          <button type="button" class="mp-ctrl" id="mp-ctrl-mouse" data-ctrl="mouse" aria-pressed="false" aria-describedby="mp-ctrl-guide">
+            <span class="mp-ctrl-kicker">MOUSE</span>
+            <span class="mp-ctrl-title">鼠标游玩</span>
+            <span class="mp-ctrl-desc">点地行走 · 拖齿轮 / 转盘<br>滚轮上下均为攻击 · 关闭 WASD</span>
+          </button>
+        </div>
+        <div id="mp-ctrl-guide" class="mp-ctrl-guide" data-scheme="" hidden aria-live="polite">
+          <div class="mp-cg-head">
+            <span class="mp-cg-kicker" id="mp-cg-kicker">KEYS</span>
+            <span class="mp-cg-title" id="mp-cg-title">操作一览</span>
+          </div>
+          <div class="mp-cg-body" id="mp-cg-body"></div>
+          <p class="mp-cg-note" id="mp-cg-note"></p>
+        </div>
+      </div>
+      <div class="mp-palette-wrap">
+        <div class="mp-tip" id="mp-tip" data-state="idle">
+          <div class="mp-tip-rail" id="mp-tip-rail" aria-hidden="true"></div>
+          <div class="mp-tip-card">
+            <div class="mp-tip-head">
+              <span class="mp-tip-num" id="mp-tip-num">◈</span>
+              <span class="mp-tip-kicker" id="mp-tip-kicker">SPECTRUM</span>
+            </div>
+            <div class="mp-tip-name" id="mp-tip-name">各章天光</div>
+            <div class="mp-tip-poem" id="mp-tip-poem">悬停色块，聆听一章的气息</div>
+          </div>
+          <div class="mp-tip-caret" id="mp-tip-caret" aria-hidden="true"></div>
+        </div>
+        <div class="mp-palette" id="mp-palette" aria-label="各章天光与砖色"></div>
+      </div>
+      <div class="mp-cards">
+        <button type="button" class="mp-card" id="mp-tour" data-mode="tour">
+          <span class="mp-diff">轻松 · 漫步</span>
+          <span class="mp-kicker">TOUR</span>
+          <span class="mp-title">观光模式</span>
+          <span class="mp-desc">不佩剑、无影怪、无血量限制。从第 0 关试验场启程，再入正篇；只留下脚步与光影。</span>
+          <span class="mp-meta">起点 → 终点 · 无时限</span>
+        </button>
+        <button type="button" class="mp-card" id="mp-slaughter" data-mode="slaughter">
+          <span class="mp-diff">挑战 · 倒行</span>
+          <span class="mp-kicker">SLAUGHTER</span>
+          <span class="mp-title">屠戮模式</span>
+          <span class="mp-desc">背负大剑，廊中有影。从终章倒行回第一章（第 0 关试验场不计入）；出生与终点对调，限时 5 分钟。</span>
+          <span class="mp-meta">终点 ↔ 起点 · ⏱ 5:00</span>
+        </button>
+      </div>
+      <p class="mp-foot">每一章的颜色，都在此汇成一条安静的色谱</p>
+    </div>
+  </div>
+
+  <!-- 章节目录 -->
+  <div id="levels" class="overlay hidden">
+    <div class="card card-wide">
+      <div id="levels-title">章节目录</div>
+      <div id="levels-meta"></div>
+      <div id="stele-log" aria-label="建筑师留言统计"></div>
+      <div id="levels-grid"></div>
+      <div id="levels-actions"><button id="btn-close-levels" class="primary">返回</button></div>
+    </div>
+  </div>
+
+  <!-- 通关面板 -->
+  <div id="win" class="overlay hidden">
+    <div class="card">
+      <div class="win-glyph">◈</div>
+      <div id="win-title">第一章 · 完成</div>
+      <div id="win-stars" aria-hidden="true"></div>
+      <div id="win-sub">光路已被点亮</div>
+      <div id="win-stats">视角转换 0 次 · 星屑 0/0</div>
+      <div id="win-steles"></div>
+      <div id="win-record"></div>
+      <div id="win-actions">
+        <button id="btn-next" class="primary">下一章 →</button>
+        <button id="btn-again">重玩本章</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 屠戮模式超时 -->
+  <div id="slaughter-fail" class="overlay hidden">
+    <div class="card">
+      <div class="win-glyph">⌛</div>
+      <div id="sf-title">时限已至</div>
+      <div id="sf-sub">未能在 5 分钟内回到并完成第一章</div>
+      <div id="win-actions">
+        <button id="btn-sf-retry" class="primary">再试一次</button>
+        <button id="btn-sf-mode">重选模式</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 关于面板 -->
+  <div id="about" class="overlay hidden">
+    <div class="card card-wide">
+      <div id="about-title">投影回廊 · Perspective Corridor</div>
+      <p class="ab-p">一款纪念碑谷式的 2D↔3D 视角迷宫。规则很简单：<b>在当前视角里，看起来挨着、走得过去的地砖，就真的能走</b>。<br>
+        · <b>3D 等距</b>：顶面<strong>同色且四邻连成一片</strong>才是同一平面，可在上面走；同色但不相连不能直达。侧面露出墙色的高差，3D 里爬不上去——请切俯视。远处对齐可跨（金色光带）。<br>
+        · <b>2D 俯视</b>：世界被压成平面，脚印相邻都能走——含一切高差；青色幽灵桥也只在俯视里是实体。<br>
+        按 <kbd>空格</kbd> 在俯视与 3D 之间翻转；多方位章节再用 <kbd>Q</kbd> / <kbd>E</kbd>（或两侧按钮）转动 3D 卦限——同一座浮砖，换个方位才会对齐成桥。主角不会跳跃，全程贴地行走；可用 <kbd>WASD</kbd> 移动（<kbd>A</kbd>/<kbd>D</kbd> 原地左转/右转，<kbd>W</kbd>/<kbd>S</kbd> 沿面朝前进/后退；点按一格或一转、长按连走连转），或点地砖寻路；途中可<b>右键</b> / <kbd>Esc</kbd> 停步，或再点地砖改道。</p>
+      <p class="ab-p"><b>游戏模式</b>：进入时可选难度。<strong>观光模式</strong>无影怪、无佩剑、<strong>无血量限制</strong>（正篇），从<strong>第 0 关机能试验场</strong>启程——试验场内仍可测影怪 / 大剑 <kbd>J</kbd> / 心与坠落，以及青桥·金桥·假台·齿轮转盘·序星·Q/E 方位·攀高·WASD；再入正篇后恢复纯观光。踏空在正篇只回起点。<strong>屠戮模式</strong>背负大剑、廊中有影，出生与终点对调，从终章倒行回第一章（试验场不计入倒行），全局限时 5 分钟。可在账号菜单中重新选择模式。</p>
+      <p class="ab-p"><b>生命</b>（仅屠戮模式）：右上角三颗心。站在<b>仅 3D 或仅俯视才实体的地砖</b>上、或 3D 悬空高台上，再切到另一视角，若新视角里脚下没有实体，会踏空坠落，失去一颗心，并从<b>本章出生点</b>重来。三心耗尽后生命回满，仍从本章重开。按 <kbd>R</kbd> 重玩会补满生命 · 右上角可调<b>画质</b>（卡顿请选「流畅」）与音量 · <kbd>M</kbd> 静音。</p>
+      <p class="ab-p"><b>影怪与大剑</b>（仅屠戮模式）：每关固定刷新 <b>2</b> 只影怪（出生点 4 格外、位置固定）。进入其视野会从侧翼追杀；碰到会扣一颗心，但<strong>不会送回出生点</strong>——扣血特效期间时间冻结，特效结束小怪才再动。三心耗尽则本章重开，影怪一并刷新。影怪同样受视角/齿轮机关影响，踏空坠落即永久消失（直到重开本章）。主角背负大剑：仅按 <kbd>J</kbd> 攻击（扇形朝<strong>眼睛看的方向</strong>，有前摇与后摇）；<strong>一刀可斩杀</strong>。影怪会在前摇时侧闪躲避。</p>
+      <p class="ab-p"><b>齿轮与错觉</b>：齿轮带动平台转向；一转之后，远处的砖可能在画面上<b>恰好对齐</b>，虚影便成了实路（对齐处亮<b>金色光带</b>）。侧面有色差、须俯视翻过的高差，会亮<b>青色光带</b>。接通错觉时会有轻声与字条提醒。站在转动的平台上，还会被它一同带走。</p>
+      <p class="ab-p"><b>建筑师留言</b>：每一章都藏有一块石碑旁支。右上角 <b>◈</b> 统计已读篇数；正篇碑文全部读过，并通关第十三章，会开启隐藏外章。</p>
+      <p class="ab-p"><b>账号与存档</b>：仅主机双击「启动游戏.bat」。玩完关掉本机游戏网页即可自动清后台（也会启动「关闭游戏.bat」）；也可在启动窗按任意键。其它电脑请用「访客联机.bat」或浏览器打开 <code>http://主机IP:8940/</code>，不要在访客机再启动本地服务。有 Node 为在线模式（进度写入 data/db.json）；没有 Node 则为离线游客（进度仅本机浏览器）。</p>
+      <p class="ab-p ab-credit"><b>站在开源巨人的肩上（借鉴与致谢）</b>：<br>
+        · <a href="https://github.com/chocolatemale/valley-silent-spire" target="_blank">chocolatemale/valley-silent-spire</a> — 接口点(port)寻路图、"旋转=改图"、五声音阶音效<br>
+        · <a href="https://github.com/kvnloo/monument" target="_blank">kvnloo/monument</a> — 正交等轴相机 / 视觉连通 / 低饱和配色研究<br>
+        · <a href="https://github.com/marshyunlee/monument-valley-web" target="_blank">marshyunlee/monument-valley-web</a> — 早期 Three.js 克隆参考<br>
+        · <a href="https://unity.com/" target="_blank">Monument Valley (ustwo games)</a> — 玩法灵感来源<br>
+        · 渲染 <a href="https://threejs.org" target="_blank">Three.js r147</a> · 动画 <a href="https://gsap.com" target="_blank">GSAP 3</a>（均已本地化，离线可玩）</p>
+      <div id="about-actions"><button id="btn-close-about" class="primary">继续游戏</button></div>
+    </div>
+  </div>
+
+  <script src="lib/three.min.js"></script>
+  <script src="lib/gsap.min.js"></script>
+  <script src="js/levels.js"></script>
+  <script src="js/auth.js"></script>
+  <script src="js/auth-demos.js"></script>
+  <script src="js/main.js"></script>
+</body>
+</html>

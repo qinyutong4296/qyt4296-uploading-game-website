@@ -1,0 +1,246 @@
+:root {
+  color-scheme: light;
+  --paper: #faf9f6;
+  --paper-deep: #f3f0ea;
+  --ink: #141210;
+  --ink-mid: #2a2723;
+  --ink-wash: rgba(20, 18, 16, 0.08);
+  --ink-wash-2: rgba(20, 18, 16, 0.045);
+  --text: #1f1d1a;
+  --muted: #6e685c;
+  --line: rgba(20, 18, 16, 0.12);
+  --line-strong: rgba(20, 18, 16, 0.28);
+  --wash: rgba(255, 255, 255, 0.72);
+  --wash-solid: #fffcf7;
+  --seal: #c3272b;
+  --seal-soft: rgba(195, 39, 43, 0.12);
+  --ok: #3d5c48;
+  --accent: #141210;
+  --accent-2: #4a4640;
+  --danger: #c3272b;
+  --cinnabar: #c3272b;
+  --bg: var(--paper);
+  --bg-elev: var(--wash);
+  --bg-card: var(--wash-solid);
+  --shadow: 0 14px 36px rgba(20, 18, 16, 0.06);
+  --shadow-soft: 0 4px 16px rgba(20, 18, 16, 0.035);
+  --sidebar: 210px;
+  --header: 64px;
+  --ease: cubic-bezier(0.22, 1, 0.36, 1);
+  --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+  /* 楷体优先：文楷清晰，系统楷体兜底 */
+  --font-kaiti: "LXGW WenKai", "LXGW WenKai Screen", "Kaiti SC", "STKaiti", "KaiTi", "楷体", "DFKai-SB", serif;
+  --font-display: var(--font-kaiti);
+  --font-body: var(--font-kaiti);
+  --fs-body: 17.5px;
+  --fs-small: 14.5px;
+  --fs-title: 22px;
+  --fs-hero: 32px;
+  --lh-body: 1.85;
+  --ls-body: 0.08em;
+  --ls-title: 0.16em;
+  font-family: var(--font-body);
+  font-size: var(--fs-body);
+  line-height: var(--lh-body);
+  letter-spacing: var(--ls-body);
+  font-weight: 400;
+}
+
+* { box-sizing: border-box; }
+html, body, #root { height: 100%; margin: 0; }
+html { scroll-behavior: smooth; }
+
+body {
+  color: var(--text);
+  background-color: var(--paper);
+  background-image:
+    radial-gradient(ellipse 780px 460px at 4% -6%, rgba(20, 18, 16, 0.07), transparent 60%),
+    radial-gradient(ellipse 620px 400px at 98% 2%, rgba(20, 18, 16, 0.045), transparent 58%),
+    radial-gradient(ellipse 520px 360px at 78% 108%, rgba(20, 18, 16, 0.05), transparent 55%),
+    linear-gradient(180deg, #fcfbf8 0%, #f7f4ee 50%, #f2efe8 100%);
+  background-attachment: fixed;
+  /* 楷体假粗体会糊：用默认渲染，避免过度抗锯齿把笔画粘在一起 */
+  -webkit-font-smoothing: auto;
+  -moz-osx-font-smoothing: auto;
+  text-rendering: optimizeLegibility;
+  font-family: var(--font-body);
+  font-size: var(--fs-body);
+  line-height: var(--lh-body);
+  letter-spacing: var(--ls-body);
+  font-weight: 400;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  body {
+    animation: inkDrift 30s var(--ease) infinite alternate;
+  }
+}
+
+@keyframes inkDrift {
+  0% { background-position: 0% 0%, 100% 0%, 78% 100%, 0 0; }
+  100% { background-position: 2% 1%, 98% 2%, 74% 97%, 0 0; }
+}
+
+@keyframes fadeUp {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes inkIn {
+  from { opacity: 0; transform: translateY(8px) scale(0.992); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+@keyframes inkSpread {
+  from { opacity: 0; clip-path: inset(0 40% 0 40%); }
+  to { opacity: 1; clip-path: inset(0 0 0 0); }
+}
+
+@keyframes sealPulse {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.06); }
+}
+
+h1, h2, h3, h4, strong, b {
+  font-family: var(--font-display);
+  font-weight: 500;
+  letter-spacing: var(--ls-title);
+  line-height: 1.55;
+}
+
+a {
+  color: var(--accent-2);
+  text-decoration: none;
+  transition: color 0.3s var(--ease);
+}
+a:hover { color: var(--ink); }
+
+button, input, textarea, select {
+  font-family: inherit;
+  font-size: inherit;
+  letter-spacing: inherit;
+  line-height: inherit;
+}
+
+button {
+  cursor: pointer;
+  border: 1px solid var(--ink);
+  border-radius: 1px;
+  padding: 10px 20px;
+  background: var(--ink);
+  color: #faf8f4;
+  font-weight: 500;
+  letter-spacing: 0.14em;
+  font-size: 16.5px;
+  box-shadow: none;
+  transition:
+    transform 0.28s var(--ease-out),
+    background 0.28s var(--ease),
+    border-color 0.28s var(--ease),
+    color 0.28s var(--ease),
+    box-shadow 0.28s var(--ease);
+}
+button:hover {
+  background: #000;
+  border-color: #000;
+  transform: translateY(-1px);
+  box-shadow: 0 8px 18px rgba(20, 18, 16, 0.12);
+}
+button:active { transform: translateY(0); }
+
+button.ghost {
+  background: transparent;
+  color: var(--ink);
+  border: 1px solid var(--line-strong);
+  box-shadow: none;
+}
+button.ghost:hover {
+  background: var(--ink-wash);
+  border-color: var(--ink);
+  box-shadow: none;
+}
+
+button.danger,
+button.seal {
+  background: var(--seal);
+  border-color: #a01f23;
+  color: #fff8f6;
+}
+button.danger:hover,
+button.seal:hover {
+  background: #a81f24;
+  border-color: #8e1a1e;
+}
+
+input, textarea {
+  width: 100%;
+  padding: 11px 13px;
+  border-radius: 1px;
+  border: 1px solid var(--line);
+  background: rgba(255, 255, 255, 0.86);
+  color: var(--text);
+  font-size: 16.5px;
+  letter-spacing: 0.06em;
+  line-height: 1.7;
+  transition: border-color 0.28s var(--ease), box-shadow 0.28s var(--ease);
+}
+input:focus, textarea:focus {
+  outline: none;
+  border-color: var(--ink-mid);
+  box-shadow: 0 0 0 3px var(--ink-wash);
+}
+
+.muted {
+  color: var(--muted);
+  font-size: var(--fs-small);
+  letter-spacing: 0.1em;
+  line-height: 1.75;
+  font-weight: 400;
+}
+
+.banner {
+  background: var(--seal-soft);
+  border: 1px solid rgba(195, 39, 43, 0.22);
+  border-left: 3px solid var(--seal);
+  color: #8e1a1e;
+  padding: 11px 14px;
+  border-radius: 1px;
+  margin-bottom: 16px;
+  font-size: 15.5px;
+  letter-spacing: 0.08em;
+  line-height: 1.7;
+  animation: fadeUp 0.4s var(--ease);
+}
+.ok-banner {
+  background: rgba(61, 92, 72, 0.07);
+  border: 1px solid rgba(61, 92, 72, 0.2);
+  border-left: 3px solid var(--ok);
+  color: #2f4a3a;
+  padding: 11px 14px;
+  border-radius: 1px;
+  margin-bottom: 16px;
+  font-size: 15.5px;
+  letter-spacing: 0.08em;
+  line-height: 1.7;
+  animation: fadeUp 0.4s var(--ease);
+}
+
+.ink-rule {
+  height: 1px;
+  border: 0;
+  margin: 14px 0;
+  background: linear-gradient(90deg, transparent, var(--ink-mid) 12%, var(--ink) 50%, var(--ink-mid) 88%, transparent);
+  opacity: 0.35;
+}
+
+::selection {
+  background: rgba(195, 39, 43, 0.16);
+  color: var(--ink);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation: none !important;
+    transition-duration: 0.01ms !important;
+  }
+}

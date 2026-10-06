@@ -1,0 +1,264 @@
+/* ===== 合并自 pages/ProfilePage.module.css ===== */
+
+.page {
+  max-width: 800px;
+  margin: 0 auto;
+  padding: 8px 4px 28px;
+  animation: fadeUp 0.45s var(--ease);
+}
+.top {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 16px;
+  margin-bottom: 16px;
+  padding: 18px;
+  border-radius: 2px;
+  background: var(--wash);
+  border: 1px solid var(--line);
+  transition: border-color 0.3s var(--ease);
+  flex-wrap: wrap;
+}
+.identity {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  min-width: 0;
+}
+.avatar {
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  background: var(--ink);
+  color: #faf8f4;
+  display: grid;
+  place-items: center;
+  font-family: var(--font-display);
+  font-size: 24px;
+  font-weight: 500;
+  flex-shrink: 0;
+  position: relative;
+  object-fit: cover;
+  overflow: hidden;
+}
+.avatar::after {
+  content: "";
+  position: absolute;
+  top: -1px;
+  right: -1px;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--seal);
+  box-shadow: 0 0 0 2px var(--paper);
+}
+img.avatar::after {
+  display: none;
+}
+
+.avatarPreview {
+  width: 72px;
+  height: 72px;
+  border-radius: 50%;
+  background: var(--ink);
+  color: #faf8f4;
+  display: grid;
+  place-items: center;
+  font-family: var(--font-display);
+  font-size: 28px;
+  font-weight: 500;
+  object-fit: cover;
+  border: 1px solid var(--line);
+}
+
+.uploadRow {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+}
+.uploadRow input[type="file"] {
+  max-width: 100%;
+  font-size: 14px;
+}
+
+.tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 2px;
+  margin-bottom: 16px;
+  border-bottom: 1px solid var(--line);
+}
+.tab {
+  border: 0;
+  border-bottom: 2px solid transparent;
+  background: transparent;
+  color: var(--muted);
+  padding: 10px 14px;
+  border-radius: 0;
+  font-weight: 500;
+  font-size: 15px;
+  letter-spacing: 0.1em;
+  box-shadow: none;
+  margin-bottom: -1px;
+  transition: color 0.28s var(--ease), border-color 0.28s var(--ease);
+}
+.tab:hover {
+  background: transparent;
+  color: var(--ink);
+  transform: none;
+  filter: none;
+  box-shadow: none;
+}
+.tab.on {
+  color: var(--ink);
+  border-bottom-color: var(--seal);
+}
+
+.list {
+  display: grid;
+  gap: 10px;
+}
+.row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  background: rgba(255, 252, 245, 0.55);
+  border: 1px solid var(--line);
+  border-radius: 2px;
+  padding: 14px 16px;
+  transition: transform 0.3s var(--ease-out), border-color 0.3s var(--ease);
+}
+.row:hover {
+  transform: translateY(-2px);
+  border-color: var(--line-strong);
+}
+.rowMain {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+.rowActions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+.star {
+  width: 36px;
+  height: 36px;
+  padding: 0;
+  border: 1px solid var(--line);
+  background: transparent;
+  color: var(--muted);
+  border-radius: 2px;
+  font-size: 18px;
+  line-height: 1;
+  box-shadow: none;
+  display: grid;
+  place-items: center;
+  transition: color 0.25s var(--ease), border-color 0.25s var(--ease), background 0.25s var(--ease);
+}
+.star:hover {
+  color: var(--seal);
+  border-color: var(--seal);
+  background: var(--seal-soft);
+  transform: none;
+  filter: none;
+  box-shadow: none;
+}
+.starOn {
+  color: var(--seal);
+  border-color: rgba(195, 39, 43, 0.35);
+}
+
+.edit {
+  display: grid;
+  gap: 18px;
+  padding: 18px;
+  border: 1px solid var(--line);
+  border-radius: 2px;
+  background: rgba(255, 252, 245, 0.55);
+}
+.field {
+  display: grid;
+  gap: 8px;
+}
+.field > span {
+  font-size: 14px;
+  letter-spacing: 0.12em;
+  color: var(--muted);
+}
+.field input {
+  max-width: 320px;
+}
+.presets {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.preset {
+  width: 42px;
+  height: 42px;
+  padding: 0;
+  border-radius: 50%;
+  border: 1px solid var(--line);
+  background: rgba(255, 255, 255, 0.7);
+  color: var(--ink);
+  font-family: var(--font-display);
+  font-size: 18px;
+  box-shadow: none;
+  display: grid;
+  place-items: center;
+  transition: border-color 0.25s var(--ease), background 0.25s var(--ease), color 0.25s var(--ease);
+}
+.preset:hover {
+  transform: none;
+  filter: none;
+  box-shadow: none;
+  border-color: var(--line-strong);
+}
+.presetOn {
+  background: var(--ink);
+  color: #faf8f4;
+  border-color: var(--ink);
+}
+.notice {
+  margin-bottom: 12px;
+  padding: 10px 12px;
+  border: 1px solid rgba(195, 39, 43, 0.25);
+  background: var(--seal-soft);
+  color: var(--seal);
+  border-radius: 2px;
+  font-size: 14px;
+  letter-spacing: 0.08em;
+}
+
+/* ===== 合并自 games/memory/MemoryGame.module.css ===== */
+
+.stage { display: grid; justify-items: center; gap: 12px; margin: 8px 0 20px; }
+.grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 8px;
+  width: 360px;
+}
+.card {
+  aspect-ratio: 1;
+  background: #2a2723;
+  border: 1px solid rgba(20, 18, 16, 0.35);
+  color: #faf8f4;
+  font-size: 26px;
+  border-radius: 2px;
+  letter-spacing: 0.08em;
+  transition: background 0.28s var(--ease), transform 0.28s var(--ease-out);
+}
+.card:hover { transform: translateY(-1px); }
+.card.open {
+  background: #fffcf7;
+  color: #141210;
+  border-color: rgba(20, 18, 16, 0.2);
+}
